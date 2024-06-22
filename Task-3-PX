@@ -1,0 +1,347 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "f0588b1c",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-06-22T05:58:50.017972Z",
+     "iopub.status.busy": "2024-06-22T05:58:50.017555Z",
+     "iopub.status.idle": "2024-06-22T05:58:50.028148Z",
+     "shell.execute_reply": "2024-06-22T05:58:50.027311Z"
+    },
+    "papermill": {
+     "duration": 0.017535,
+     "end_time": "2024-06-22T05:58:50.030342",
+     "exception": false,
+     "start_time": "2024-06-22T05:58:50.012807",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import math"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "796d801a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-06-22T05:58:50.038276Z",
+     "iopub.status.busy": "2024-06-22T05:58:50.037292Z",
+     "iopub.status.idle": "2024-06-22T05:58:50.047928Z",
+     "shell.execute_reply": "2024-06-22T05:58:50.047020Z"
+    },
+    "papermill": {
+     "duration": 0.016377,
+     "end_time": "2024-06-22T05:58:50.049889",
+     "exception": false,
+     "start_time": "2024-06-22T05:58:50.033512",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def bleu_score(references, candidate):\n",
+    "    \"\"\"Function to Calculate Bleu Score Mathematically\"\"\"\n",
+    "    # Tokenize the sentences\n",
+    "    reference_tokens = [ref.lower().split() for ref in references]\n",
+    "    candidate_tokens = candidate.lower().split()\n",
+    "    \n",
+    "    # Declare list for precision\n",
+    "    precisions = []\n",
+    "    # Task instr \"Only consider upto n=4 n-grams\"\n",
+    "    n = 4  \n",
+    "        \n",
+    "    for i in range(1, n+1):\n",
+    "        ngram_ref = []\n",
+    "        # Calculate ngrams for refs\n",
+    "        for ref in reference_tokens:\n",
+    "            for j in range(len(ref)-i+1):\n",
+    "                ngram_ref.append(tuple(ref[j:j+i]))\n",
+    "        \n",
+    "        # Calculate ngrams for candidates\n",
+    "        ngram_candidate = []\n",
+    "        for j in range(len(candidate_tokens)-i+1):\n",
+    "            ngram_candidate.append(tuple(candidate_tokens[j:j+i]))\n",
+    "        \n",
+    "        if len(ngram_candidate) == 0:\n",
+    "            precision = 0.0\n",
+    "        else:\n",
+    "            common_ngrams = set(ngram_ref) & set(ngram_candidate)\n",
+    "            precision = len(common_ngrams) / len(ngram_candidate)\n",
+    "        \n",
+    "        precisions.append(precision)\n",
+    "    \n",
+    "    # Calculate geometric mean of precisions\n",
+    "    if any(p == 0.0 for p in precisions):\n",
+    "        geometric_mean_precision = 0.0  # Using if statement so we don't end up with log(0)\n",
+    "    else:\n",
+    "        sum_logs = sum(math.log(p) for p in precisions)\n",
+    "        geometric_mean_precision = math.exp(sum_logs / n)\n",
+    "    \n",
+    "    # Calculating Brevity-Penalty\n",
+    "    c = len(candidate_tokens)\n",
+    "    r = min(len(ref) for ref in reference_tokens)\n",
+    "    if c > r:\n",
+    "        brevity_penalty = 1.0\n",
+    "    else:\n",
+    "        brevity_penalty = math.exp(1 - r / c)\n",
+    "    \n",
+    "    # Finallly calculate bleu score\n",
+    "    bleu_score = brevity_penalty * geometric_mean_precision\n",
+    "    \n",
+    "    return bleu_score"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "bd144b8a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-06-22T05:58:50.056369Z",
+     "iopub.status.busy": "2024-06-22T05:58:50.056005Z",
+     "iopub.status.idle": "2024-06-22T05:58:50.061815Z",
+     "shell.execute_reply": "2024-06-22T05:58:50.060958Z"
+    },
+    "papermill": {
+     "duration": 0.011369,
+     "end_time": "2024-06-22T05:58:50.063961",
+     "exception": false,
+     "start_time": "2024-06-22T05:58:50.052592",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.48902285358302\n"
+     ]
+    }
+   ],
+   "source": [
+    "references1 = [\n",
+    "    \"It is a guide to action that ensures that the military will forever heed Party commands\",\n",
+    "    \"It is the guiding principle which guarantees the military forces always being under the command of the Party\",\n",
+    "    \"It is the practical guide for the army always to heed the directions of the party\"\n",
+    "]\n",
+    "candidate1 = \"It is a guide to action which ensures that the military always obeys the commands of the party\"\n",
+    "bleu_score1 = bleu_score(references1, candidate1)\n",
+    "print(bleu_score1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "ae7b05de",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-06-22T05:58:50.071012Z",
+     "iopub.status.busy": "2024-06-22T05:58:50.070360Z",
+     "iopub.status.idle": "2024-06-22T05:58:50.075925Z",
+     "shell.execute_reply": "2024-06-22T05:58:50.075028Z"
+    },
+    "papermill": {
+     "duration": 0.011212,
+     "end_time": "2024-06-22T05:58:50.077865",
+     "exception": false,
+     "start_time": "2024-06-22T05:58:50.066653",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "references2 = [\n",
+    "    \"It is a guide to action that ensures that the military will forever heed Party commands\",\n",
+    "    \"It is the guiding principle which guarantees the military forces always being under the command of the Party\",\n",
+    "    \"It is the practical guide for the army always to heed the directions of the party\"\n",
+    "]\n",
+    "candidate2 = \"It is the to action the troops forever hearing the activity guidebook that party direct\"\n",
+    "bleu_score2 = bleu_score(references2, candidate2)\n",
+    "print(bleu_score2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ca6d2fd9",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002596,
+     "end_time": "2024-06-22T05:58:50.083217",
+     "exception": false,
+     "start_time": "2024-06-22T05:58:50.080621",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Using NLTK to cross-check"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "b5b175c9",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-06-22T05:58:50.090314Z",
+     "iopub.status.busy": "2024-06-22T05:58:50.089621Z",
+     "iopub.status.idle": "2024-06-22T05:58:51.747213Z",
+     "shell.execute_reply": "2024-06-22T05:58:51.746051Z"
+    },
+    "papermill": {
+     "duration": 1.663578,
+     "end_time": "2024-06-22T05:58:51.749459",
+     "exception": false,
+     "start_time": "2024-06-22T05:58:50.085881",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "BLEU Score for case 1: 0.5045666840058485\n"
+     ]
+    }
+   ],
+   "source": [
+    "import nltk\n",
+    "from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction\n",
+    "\n",
+    "references1 = [\n",
+    "    \"It is a guide to action that ensures that the military will forever heed Party commands\",\n",
+    "    \"It is the guiding principle which guarantees the military forces always being under the command of the Party\",\n",
+    "    \"It is the practical guide for the army always to heed the directions of the party\"\n",
+    "]\n",
+    "\n",
+    "candidate1 = \"It is a guide to action which ensures that the military always obeys the commands of the party\"\n",
+    "\n",
+    "# Tokenize references and candidate\n",
+    "references1_tokenized = [[token.lower() for token in nltk.word_tokenize(ref)] for ref in references1]\n",
+    "candidate1_tokenized = [token.lower() for token in nltk.word_tokenize(candidate1)]\n",
+    "\n",
+    "# Compute BLEU score\n",
+    "bleu_score1 = sentence_bleu(references1_tokenized, candidate1_tokenized, smoothing_function=SmoothingFunction().method1)\n",
+    "\n",
+    "print(f\"BLEU Score for case 1: {bleu_score1}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "1063fbe7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2024-06-22T05:58:51.756689Z",
+     "iopub.status.busy": "2024-06-22T05:58:51.756113Z",
+     "iopub.status.idle": "2024-06-22T05:58:51.764743Z",
+     "shell.execute_reply": "2024-06-22T05:58:51.763572Z"
+    },
+    "papermill": {
+     "duration": 0.014366,
+     "end_time": "2024-06-22T05:58:51.766761",
+     "exception": false,
+     "start_time": "2024-06-22T05:58:51.752395",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "BLEU Score for case 2: 0.09151480843357339\n"
+     ]
+    }
+   ],
+   "source": [
+    "import nltk\n",
+    "from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction\n",
+    "\n",
+    "references2 = [\n",
+    "    \"It is a guide to action that ensures that the military will forever heed Party commands\",\n",
+    "    \"It is the guiding principle which guarantees the military forces always being under the command of the Party\",\n",
+    "    \"It is the practical guide for the army always to heed the directions of the party\"\n",
+    "]\n",
+    "\n",
+    "candidate2 = \"It is the to action the troops forever hearing the activity guidebook that party direct\"\n",
+    "\n",
+    "# Tokenize references and candidate\n",
+    "references2_tokenized = [[token.lower() for token in nltk.word_tokenize(ref)] for ref in references2]\n",
+    "candidate2_tokenized = [token.lower() for token in nltk.word_tokenize(candidate2)]\n",
+    "\n",
+    "# Compute BLEU score\n",
+    "bleu_score2 = sentence_bleu(references2_tokenized, candidate2_tokenized, smoothing_function=SmoothingFunction().method1)\n",
+    "\n",
+    "print(f\"BLEU Score for case 2: {bleu_score2}\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "colab": {
+   "provenance": []
+  },
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [],
+   "dockerImageVersionId": 30732,
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.13"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 4.873425,
+   "end_time": "2024-06-22T05:58:52.289603",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2024-06-22T05:58:47.416178",
+   "version": "2.5.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
